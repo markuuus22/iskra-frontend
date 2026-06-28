@@ -1,7 +1,7 @@
 // ── Искра — клиентская логика ───────────────────────────────────────────────
 
 // ВАЖНО: впиши сюда URL своего бэкенда на Railway (без слэша в конце).
-const API_BASE = "https://ТВОЙ-ПРОЕКТ.up.railway.app";
+const API_BASE = "https://skra-backend-production.up.railway.app";
 
 const BATCH = 12;      // сколько заданий просим за один вызов модели
 const REFILL_AT = 3;   // когда в корзине осталось ≤ — тихо догенерируем
@@ -109,7 +109,10 @@ async function fetchBatch(level, mode, count) {
       count,
     }),
   });
-  if (!res.ok) throw new Error("generate failed");
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error("HTTP " + res.status + " — " + body);
+  }
   const data = await res.json();
   return data.tasks || [];
 }
@@ -127,8 +130,8 @@ async function ensureBucket(level, mode, min = REFILL_AT) {
     for (const t of tasks) {
       if (!seen.has(t.text)) state.buckets[key].push(t);
     }
-  } catch (_) {
-    /* тихо: покажем ошибку только если карта реально не вышла */
+  } catch (e) {
+    window.__lastErr = e.message;
   } finally {
     inFlight[key] = false;
   }
@@ -159,7 +162,7 @@ async function drawCard(mode) {
   const card = state.buckets[key]?.shift();
   if (!card) {
     textEl.classList.remove("loading");
-    textEl.textContent = "Колода не пришла. Проверь связь и нажми ещё раз.";
+    textEl.textContent = "Не пришло: " + (window.__lastErr || "сервер молчит");
     return;
   }
 
