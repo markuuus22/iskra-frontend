@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Искра</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&display=swap&subset=cyrillic" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-level="1">
+  <div class="glow" aria-hidden="true"></div>
+
+  <main class="app">
+
+    <!-- ── Экран 1: подтверждение возраста ──────────────────────── -->
+    <section id="age-gate" class="screen is-active">
+      <div class="gate">
+        <div class="spark">✦</div>
+        <h1 class="display">Искра</h1>
+        <p class="lede">Игра для двоих. На вечер только для вас.</p>
+        <p class="gate-q">Здесь задания для взрослых. Тебе уже есть 18?</p>
+        <div class="gate-actions">
+          <button class="btn btn-primary" id="age-yes">Мне есть 18</button>
+          <button class="btn btn-ghost" id="age-no">Ещё нет</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Экран 2: настройка пары ──────────────────────────────── -->
+    <section id="setup" class="screen">
+      <h2 class="display">Кто играет</h2>
+      <div class="field">
+        <label for="name-a">Первый игрок</label>
+        <input id="name-a" type="text" maxlength="20" placeholder="Имя" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="name-b">Второй игрок</label>
+        <input id="name-b" type="text" maxlength="20" placeholder="Имя" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>Где вы сейчас</label>
+        <div class="segmented" id="setting-seg">
+          <button class="seg is-on" data-val="дома">Дома</button>
+          <button class="seg" data-val="на людях">На людях</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="exclude">Что не предлагать <span class="muted">(необязательно)</span></label>
+        <input id="exclude" type="text" maxlength="80" placeholder="через запятую" autocomplete="off" />
+      </div>
+
+      <button class="btn btn-primary btn-block" id="start">Начать</button>
+    </section>
+
+    <!-- ── Экран 3: игра ────────────────────────────────────────── -->
+    <section id="game" class="screen">
+
+      <!-- переключатель жара -->
+      <div class="heat" id="heat-seg">
+        <button class="heat-seg is-on" data-level="1"><b>1</b><span>Лёгкий</span></button>
+        <button class="heat-seg" data-level="2"><b>2</b><span>Горячий</span></button>
+        <button class="heat-seg" data-level="3"><b>3</b><span>Очень</span></button>
+      </div>
+
+      <!-- чей ход / выбор -->
+      <div id="choose" class="stage is-active">
+        <p class="turn">Ход <span id="turn-name">—</span></p>
+        <p class="prompt">Что выбираешь?</p>
+        <div class="choice">
+          <button class="btn btn-choice" id="pick-truth">Правда</button>
+          <button class="btn btn-choice" id="pick-dare">Действие</button>
+        </div>
+        <button class="btn btn-link" id="skip-turn">Пропустить ход</button>
+      </div>
+
+      <!-- карточка задания -->
+      <div id="card-stage" class="stage">
+        <article class="card" id="card">
+          <span class="card-kind" id="card-kind">Действие</span>
+          <p class="card-text" id="card-text"></p>
+          <span class="card-for" id="card-for"></span>
+        </article>
+        <button class="btn btn-primary btn-block" id="done">Готово — передать ход</button>
+        <button class="btn btn-link" id="skip-card">Не буду это — другое</button>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
