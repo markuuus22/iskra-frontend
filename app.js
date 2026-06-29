@@ -1,36 +1,35 @@
 // ── Искра — клиентская логика ───────────────────────────────────────────────
 
 // ВАЖНО: впиши сюда URL своего бэкенда на Railway (без слэша в конце).
-const API_BASE = "https://skra-backend-production.up.railway.app";
+const API_BASE = "https://ТВОЙ-ПРОЕКТ.up.railway.app";
 
 const BATCH = 12;      // сколько заданий просим за один вызов модели
 const REFILL_AT = 3;   // когда в корзине осталось ≤ — тихо догенерируем
+const RETRIES = 2;     // повторов запроса при сбое связи
 
-// Telegram WebApp
 const tg = window.Telegram?.WebApp;
 tg?.ready();
 tg?.expand();
 const haptic = (style = "medium") => tg?.HapticFeedback?.impactOccurred(style);
 
-// ── Состояние игры ──────────────────────────────────────────────────────────
 const state = {
   players: ["", ""],
-  current: 0,            // индекс игрока, чей ход
+  current: 0,
   level: 1,
   setting: "дома",
   exclude: "",
-  buckets: {},           // "уровень-режим" -> [ {mode, for, text}, ... ]
-  used: {},              // "уровень-режим" -> [ тексты ] (антиповтор)
+  buckets: {},
+  used: {},
 };
 
 const bucketKey = (level, mode) => `${level}-${mode}`;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ── Навигация по экранам ─────────────────────────────────────────────────────
+// ── Навигация ────────────────────────────────────────────────────────────────
 const screens = ["age-gate", "setup", "game"];
 function show(id) {
   screens.forEach((s) => {
-    const el = document.getElementById(s);
-    el.classList.toggle("is-active", s === id);
+    document.getElementById(s).classList.toggle("is-active", s === id);
   });
 }
 function showStage(id) {
@@ -56,16 +55,16 @@ document.getElementById("setting-seg").addEventListener("click", (e) => {
 });
 
 document.getElementById("start").onclick = () => {
-  const a = document.getElementById("name-a").value.trim() || "Игрок 1";
-  const b = document.getElementById("name-b").value.trim() || "Игрок 2";
-  state.players = [a, b];
+  state.players = [
+    document.getElementById("name-a").value.trim() || "Игрок 1",
+    document.getElementById("name-b").value.trim() || "Игрок 2",
+  ];
   state.exclude = document.getElementById("exclude").value.trim();
   state.current = 0;
   show("game");
   document.getElementById("game").classList.add("is-active");
   renderTurn();
   showStage("choose");
-  // прогреваем колоду заранее, чтобы первая карта вышла мгновенно
   ensureBucket(state.level, "действие");
   ensureBucket(state.level, "правда");
 };
@@ -77,47 +76,54 @@ document.getElementById("heat-seg").addEventListener("click", (e) => {
   document.querySelectorAll(".heat-seg").forEach((s) => s.classList.remove("is-on"));
   seg.classList.add("is-on");
   state.level = Number(seg.dataset.level);
-  document.body.dataset.level = state.level;   // переключает палитру/свечение
+  document.body.dataset.level = state.level;
   haptic("light");
-  // прогреваем новый уровень
   ensureBucket(state.level, "действие");
   ensureBucket(state.level, "правда");
 });
 
-// ── Выбор «Правда / Действие» ────────────────────────────────────────────────
+// ── Выбор ────────────────────────────────────────────────────────────────────
 document.getElementById("pick-truth").onclick = () => drawCard("правда");
 document.getElementById("pick-dare").onclick = () => drawCard("действие");
 document.getElementById("skip-turn").onclick = () => nextTurn();
-
 document.getElementById("done").onclick = () => nextTurn();
 document.getElementById("skip-card").onclick = () => drawCard(currentMode);
 
-// ── Сетевой слой ─────────────────────────────────────────────────────────────
+// ── Сеть: запрос с повторами ─────────────────────────────────────────────────
 async function fetchBatch(level, mode, count) {
   const key = bucketKey(level, mode);
-  const res = await fetch(`${API_BASE}/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name_a: state.players[0],
-      name_b: state.players[1],
-      level,
-      mode,
-      setting: state.setting,
-      exclude: state.exclude,
-      used: state.used[key] || [],
-      count,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error("HTTP " + res.status + " — " + body);
+  let lastErr;
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 60000);
+      const res = await fetch(`${API_BASE}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          name_a: state.players[0],
+          name_b: state.players[1],
+          level,
+          mode,
+          setting: state.setting,
+          exclude: state.exclude,
+          used: state.used[key] || [],
+          count,
+        }),
+      });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      return data.tasks || [];
+    } catch (e) {
+      lastErr = e;
+      if (attempt < RETRIES) await sleep(900); // подождать и попробовать снова
+    }
   }
-  const data = await res.json();
-  return data.tasks || [];
+  throw lastErr;
 }
 
-// Догенерируем корзину, если она пустеет. inFlight — чтобы не дублировать запросы.
 const inFlight = {};
 async function ensureBucket(level, mode, min = REFILL_AT) {
   const key = bucketKey(level, mode);
@@ -130,14 +136,14 @@ async function ensureBucket(level, mode, min = REFILL_AT) {
     for (const t of tasks) {
       if (!seen.has(t.text)) state.buckets[key].push(t);
     }
-  } catch (e) {
-    window.__lastErr = e.message;
+  } catch (_) {
+    /* тихо: ошибку покажем, только если карта реально не вышла */
   } finally {
     inFlight[key] = false;
   }
 }
 
-// ── Вытягивание карточки ─────────────────────────────────────────────────────
+// ── Карточка ─────────────────────────────────────────────────────────────────
 let currentMode = "действие";
 
 async function drawCard(mode) {
@@ -152,7 +158,6 @@ async function drawCard(mode) {
   kindEl.textContent = mode === "правда" ? "Правда" : "Действие";
   forEl.textContent = "";
 
-  // если в корзине пусто — показываем загрузку и ждём генерацию
   if (!state.buckets[key] || state.buckets[key].length === 0) {
     textEl.classList.add("loading");
     textEl.textContent = "Тасуем колоду…";
@@ -162,31 +167,28 @@ async function drawCard(mode) {
   const card = state.buckets[key]?.shift();
   if (!card) {
     textEl.classList.remove("loading");
-    textEl.textContent = "Не пришло: " + (window.__lastErr || "сервер молчит");
+    textEl.textContent = "Колода не дошла. Проверь связь и нажми ещё раз.";
     return;
   }
 
-  // запоминаем, чтобы не повторять
   state.used[key] = state.used[key] || [];
   state.used[key].push(card.text);
   if (state.used[key].length > 40) state.used[key].shift();
 
-  // показываем
   textEl.classList.remove("loading");
   textEl.textContent = card.text;
   forEl.textContent = card.for && card.for !== "оба" ? `→ ${card.for}` : "→ вместе";
 
   const cardEl = document.getElementById("card");
   cardEl.classList.remove("reveal");
-  void cardEl.offsetWidth;     // рестарт анимации
+  void cardEl.offsetWidth;
   cardEl.classList.add("reveal");
   haptic("medium");
 
-  // фоном докидываем, если осталось мало
   ensureBucket(level, mode);
 }
 
-// ── Ход / ротация ────────────────────────────────────────────────────────────
+// ── Ход ──────────────────────────────────────────────────────────────────────
 function renderTurn() {
   document.getElementById("turn-name").textContent = state.players[state.current];
 }

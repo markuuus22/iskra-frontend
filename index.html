@@ -15,7 +15,7 @@
 
   <main class="app">
 
-    <!-- ── Экран 1: подтверждение возраста ──────────────────────── -->
+    <!-- Экран 1: возраст -->
     <section id="age-gate" class="screen is-active">
       <div class="gate">
         <div class="spark">✦</div>
@@ -29,7 +29,7 @@
       </div>
     </section>
 
-    <!-- ── Экран 2: настройка пары ──────────────────────────────── -->
+    <!-- Экран 2: настройка -->
     <section id="setup" class="screen">
       <h2 class="display">Кто играет</h2>
       <div class="field">
@@ -40,7 +40,6 @@
         <label for="name-b">Второй игрок</label>
         <input id="name-b" type="text" maxlength="20" placeholder="Имя" autocomplete="off" />
       </div>
-
       <div class="field">
         <label>Где вы сейчас</label>
         <div class="segmented" id="setting-seg">
@@ -48,26 +47,22 @@
           <button class="seg" data-val="на людях">На людях</button>
         </div>
       </div>
-
       <div class="field">
         <label for="exclude">Что не предлагать <span class="muted">(необязательно)</span></label>
         <input id="exclude" type="text" maxlength="80" placeholder="через запятую" autocomplete="off" />
       </div>
-
       <button class="btn btn-primary btn-block" id="start">Начать</button>
     </section>
 
-    <!-- ── Экран 3: игра ────────────────────────────────────────── -->
+    <!-- Экран 3: игра -->
     <section id="game" class="screen">
-
-      <!-- переключатель жара -->
       <div class="heat" id="heat-seg">
-        <button class="heat-seg is-on" data-level="1"><b>1</b><span>Лёгкий</span></button>
-        <button class="heat-seg" data-level="2"><b>2</b><span>Горячий</span></button>
-        <button class="heat-seg" data-level="3"><b>3</b><span>Очень</span></button>
+        <button class="heat-seg is-on" data-level="1"><b>1</b><span>Light</span></button>
+        <button class="heat-seg" data-level="2"><b>2</b><span>Medium</span></button>
+        <button class="heat-seg" data-level="3"><b>3</b><span>Hard</span></button>
+        <button class="heat-seg" data-level="4"><b>4</b><span>SO HOT!</span></button>
       </div>
 
-      <!-- чей ход / выбор -->
       <div id="choose" class="stage is-active">
         <p class="turn">Ход <span id="turn-name">—</span></p>
         <p class="prompt">Что выбираешь?</p>
@@ -78,7 +73,6 @@
         <button class="btn btn-link" id="skip-turn">Пропустить ход</button>
       </div>
 
-      <!-- карточка задания -->
       <div id="card-stage" class="stage">
         <article class="card" id="card">
           <span class="card-kind" id="card-kind">Действие</span>
@@ -88,7 +82,6 @@
         <button class="btn btn-primary btn-block" id="done">Готово — передать ход</button>
         <button class="btn btn-link" id="skip-card">Не буду это — другое</button>
       </div>
-
     </section>
   </main>
 
