@@ -1,8 +1,7 @@
 // ── Искра — клиентская логика ───────────────────────────────────────────────
 
 // ВАЖНО: впиши сюда URL своего бэкенда на Railway (без слэша в конце).
-const API_BASE = "skra-backend-production.up.railway.app";
-
+const API_BASE = "https://skra-backend-production.up.railway.app";
 const BATCH = 12;      // сколько заданий просим за один вызов модели
 const REFILL_AT = 3;   // когда в корзине осталось ≤ — тихо догенерируем
 const RETRIES = 2;     // повторов запроса при сбое связи
